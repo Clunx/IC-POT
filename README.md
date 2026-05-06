@@ -99,7 +99,7 @@ Inputs:
   angles.
 - `axis_weights=[...]` rescales coordinates in the transport cost, which is
   useful for anisotropic grids.
-- `diagonal_tie_break>0` adds an optional APOT-style diagonal bias equal to the
+- `diagonal_tie_break>0` adds an optional diagonal bias equal to the
   chosen strength times the smallest positive off-diagonal cost. This is useful
   to break degeneracies between equivalent transport plans and stabilize
   qualitative matches. It is disabled by default because it deliberately
