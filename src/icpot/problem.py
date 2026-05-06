@@ -5,7 +5,7 @@ from typing import Callable, Optional, Sequence
 
 import numpy as np
 
-from icpot.costs import grid_points, pairwise_cost
+from icpot.costs import add_diagonal_tie_break, grid_points, pairwise_cost
 
 ArrayLike = np.ndarray | Sequence[float]
 CostInput = float | ArrayLike | Callable[[np.ndarray, np.ndarray, np.ndarray], ArrayLike]
@@ -85,6 +85,8 @@ def prepare_problem(
     target_spacing: Optional[Sequence[float]] = None,
     metric: str = "sqeuclidean",
     periodic: Optional[Sequence[tuple[int, float]]] = None,
+    axis_weights: Optional[Sequence[float]] = None,
+    diagonal_tie_break: float = 0.0,
     c_source: CostInput = 1.0,
     c_target: CostInput = 1.0,
     sanitize: bool = False,
@@ -112,7 +114,13 @@ def prepare_problem(
             source_points = grid_points(source_shape, axes=source_axes, spacing=source_spacing)
         if target_points is None:
             target_points = grid_points(target_shape, axes=target_axes, spacing=target_spacing)
-        C_arr = pairwise_cost(source_points, target_points, metric=metric, periodic=periodic)
+        C_arr = pairwise_cost(
+            source_points,
+            target_points,
+            metric=metric,
+            periodic=periodic,
+            axis_weights=axis_weights,
+        )
     else:
         C_arr = np.asarray(C, dtype=np.float64)
 
@@ -122,6 +130,7 @@ def prepare_problem(
         raise ValueError("C contains NaN or Inf.")
     if np.any(C_arr < 0):
         raise ValueError("C contains negative entries.")
+    C_arr = add_diagonal_tie_break(C_arr, diagonal_tie_break)
 
     c_s = _resolve_unmatched_cost(c_source, mu=mu_vec, nu=nu_vec, C=C_arr, side="source")
     c_t = _resolve_unmatched_cost(c_target, mu=mu_vec, nu=nu_vec, C=C_arr, side="target")

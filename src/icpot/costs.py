@@ -57,12 +57,14 @@ def pairwise_cost(
     *,
     metric: Metric = "sqeuclidean",
     periodic: Optional[Iterable[tuple[int, float]]] = None,
+    axis_weights: Optional[Sequence[float]] = None,
 ) -> np.ndarray:
     """Build a pairwise transport cost matrix.
 
     ``periodic`` may contain ``(axis, period)`` pairs. For those coordinates,
     distances are computed on the circle by taking the shortest wrapped
-    displacement.
+    displacement. ``axis_weights`` rescales each coordinate before computing
+    Euclidean distances, which is useful for anisotropic grids.
     """
 
     x = np.asarray(source_points, dtype=np.float64)
@@ -71,6 +73,14 @@ def pairwise_cost(
         raise ValueError("source_points and target_points must be 2D arrays.")
     if x.shape[1] != y.shape[1]:
         raise ValueError("source_points and target_points must have the same dimension.")
+    if axis_weights is None:
+        weights = np.ones(x.shape[1], dtype=np.float64)
+    else:
+        weights = np.asarray(axis_weights, dtype=np.float64).reshape(-1)
+        if weights.shape != (x.shape[1],):
+            raise ValueError(f"axis_weights must have shape {(x.shape[1],)}, got {weights.shape}.")
+        if not np.all(np.isfinite(weights)) or np.any(weights <= 0):
+            raise ValueError("axis_weights must contain finite positive values.")
 
     diff = x[:, None, :] - y[None, :, :]
     if periodic is not None:
@@ -82,12 +92,45 @@ def pairwise_cost(
             d = np.abs(diff[..., axis])
             diff[..., axis] = np.minimum(d, period - d)
 
+    diff = diff * weights[None, None, :]
     sq = np.sum(diff * diff, axis=-1)
     if metric == "sqeuclidean":
         return sq
     if metric == "euclidean":
         return np.sqrt(sq)
     raise ValueError(f"Unknown metric: {metric!r}.")
+
+
+def add_diagonal_tie_break(C: np.ndarray, strength: float) -> np.ndarray:
+    """Add a small APOT-style diagonal tie-break to a square-like cost matrix.
+
+    The added value is ``strength`` times the smallest positive off-diagonal
+    cost and is applied to entries ``C[i, i]`` for ``i < min(n_source,n_target)``.
+    This deliberately changes the optimization objective and is therefore
+    disabled by default in the high-level API.
+    """
+
+    strength = float(strength)
+    if strength < 0 or not np.isfinite(strength):
+        raise ValueError("diagonal_tie_break must be finite and nonnegative.")
+    if strength == 0:
+        return np.asarray(C, dtype=np.float64)
+
+    out = np.asarray(C, dtype=np.float64).copy()
+    n, m = out.shape
+    k = min(n, m)
+    if k <= 1:
+        return out
+
+    mask = np.ones((n, m), dtype=bool)
+    diag = np.arange(k)
+    mask[diag, diag] = False
+    vals = out[mask]
+    vals = vals[vals > 0]
+    if vals.size == 0:
+        return out
+    out[diag, diag] += strength * float(np.min(vals))
+    return out
 
 
 def score_to_unmatched_cost(

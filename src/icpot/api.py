@@ -22,6 +22,8 @@ def solve_icpot(
     target_spacing: Optional[Sequence[float]] = None,
     metric: str = "sqeuclidean",
     periodic: Optional[Sequence[tuple[int, float]]] = None,
+    axis_weights: Optional[Sequence[float]] = None,
+    diagonal_tie_break: float = 0.0,
     c_source: CostInput = 1.0,
     c_target: CostInput = 1.0,
     solver: SolverName = "sparse",
@@ -51,6 +53,12 @@ def solve_icpot(
     edge_mask:
         Optional user restriction on admissible transport edges. Passing this
         changes the feasible transport graph and should be used deliberately.
+    axis_weights:
+        Optional positive coordinate weights used when building ``C`` from
+        points or grids.
+    diagonal_tie_break:
+        Optional APOT-style diagonal bias. The default is ``0`` because any
+        positive value deliberately changes the transport objective.
     """
 
     problem = prepare_problem(
@@ -65,6 +73,8 @@ def solve_icpot(
         target_spacing=target_spacing,
         metric=metric,
         periodic=periodic,
+        axis_weights=axis_weights,
+        diagonal_tie_break=diagonal_tie_break,
         c_source=c_source,
         c_target=c_target,
         sanitize=sanitize,

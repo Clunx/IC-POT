@@ -51,3 +51,34 @@ def test_grid_api_and_periodic_cost() -> None:
 
     assert sol.dense_plan().shape == (12, 12)
     assert sol.source_unmatched_grid().shape == (3, 4)
+
+
+def test_axis_weights_change_transport_cost() -> None:
+    x = np.array([[0.0, 0.0]])
+    y = np.array([[1.0, 2.0]])
+
+    unweighted = pairwise_cost(x, y, metric="sqeuclidean")
+    weighted = pairwise_cost(x, y, metric="sqeuclidean", axis_weights=[1.0, 0.5])
+
+    assert np.allclose(unweighted, [[5.0]])
+    assert np.allclose(weighted, [[2.0]])
+
+
+def test_diagonal_tie_break_is_optional() -> None:
+    C = np.array([[0.0, 2.0], [3.0, 0.0]])
+    mu = np.ones(2)
+    nu = np.ones(2)
+
+    base = solve_icpot(mu, nu, C=C, c_source=10.0, c_target=10.0, solver="highs")
+    biased = solve_icpot(
+        mu,
+        nu,
+        C=C,
+        c_source=10.0,
+        c_target=10.0,
+        solver="highs",
+        diagonal_tie_break=0.1,
+    )
+
+    assert np.isclose(base.objective.transport, 0.0)
+    assert np.isclose(biased.objective.transport, 0.4)

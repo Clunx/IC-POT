@@ -78,6 +78,8 @@ solve_icpot(
     target_spacing=None,
     metric="sqeuclidean",
     periodic=None,
+    axis_weights=None,
+    diagonal_tie_break=0.0,
     c_source=1.0,
     c_target=1.0,
     solver="sparse",
@@ -95,6 +97,13 @@ Inputs:
 - `source_axes` / `target_axes` define explicit tensor-product grids.
 - `periodic=[(axis, period), ...]` can be used for cyclic coordinates such as
   angles.
+- `axis_weights=[...]` rescales coordinates in the transport cost, which is
+  useful for anisotropic grids.
+- `diagonal_tie_break>0` adds an optional APOT-style diagonal bias equal to the
+  chosen strength times the smallest positive off-diagonal cost. This is useful
+  to break degeneracies between equivalent transport plans and stabilize
+  qualitative matches. It is disabled by default because it deliberately
+  changes the objective.
 - Source and target masses may have different total mass. Feasibility is handled
   by the two unmatched slack variables.
 
