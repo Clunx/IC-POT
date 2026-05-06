@@ -125,3 +125,5 @@ PYTHONPATH=src python examples/basic_1d.py
 The smoke tests check that the sparse solver matches the dense HiGHS objective,
 that the IC-POT constraints hold, that unequal total masses are feasible, and
 that the grid API works.
+
+Disclaimer : LLM tools have been used to help develop this library
